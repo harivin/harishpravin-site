@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teleoperation Framework · Harish Pravin</title>
+<meta name="description" content="A teleoperation framework for a UR5e robotic arm controlled by iPhone motion, with no extra hardware.">
+<meta name="author" content="Harish Pravin">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#f2f1ec">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Crect%20width='32'%20height='32'%20fill='%23f2f1ec'/%3E%3Crect%20x='1.5'%20y='1.5'%20width='29'%20height='29'%20fill='none'%20stroke='%231d1c19'%20stroke-width='1.5'/%3E%3Cpath%20d='M6%209v14M14%209v14M6%2016h8M18%2023V9h4.5a3.5%203.5%200%200%201%200%207H18'%20fill='none'%20stroke='%231d1c19'%20stroke-width='2.2'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<link rel="canonical" href="https://harishpravin.com/teleoperation.html">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://harishpravin.com/teleoperation.html">
+<meta property="og:title" content="Teleoperation Framework · Harish Pravin">
+<meta property="og:description" content="A teleoperation framework for a UR5e robotic arm controlled by iPhone motion, with no extra hardware.">
+<meta property="og:image" content="https://harishpravin.com/img/teleop-ur-arm.jpg">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="720">
+<meta property="og:image:alt" content="An operator moves an iPhone and a UR5e arm follows over a workbench.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Teleoperation Framework · Harish Pravin">
+<meta name="twitter:description" content="A teleoperation framework for a UR5e robotic arm controlled by iPhone motion, with no extra hardware.">
+<meta name="twitter:image" content="https://harishpravin.com/img/teleop-ur-arm.jpg">
+<meta name="twitter:image:alt" content="An operator moves an iPhone and a UR5e arm follows over a workbench.">
+</head>
+<body class="page">
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="wrap site-top">
+  <nav aria-label="Site">
+    <a class="home" href="index.html">Harish Pravin</a>
+    <a class="all" href="index.html#projects">All projects</a>
+  </nav>
+</header>
+
+<main id="main" class="wrap">
+
+<article class="project" id="teleop" aria-labelledby="teleop-h">
+  <h1 class="proj-h" id="teleop-h"><span class="num">02</span> Teleoperation Framework</h1>
+  <p class="meta">MIT LEAP Group · Supervised by Dr. Rolando Bautista Montesano and Dr. John Liu · 2025 to present</p>
+
+  <figure class="fig hero">
+    <video controls preload="none" playsinline poster="img/teleop-ur-arm.jpg" width="960" height="540" aria-label="Clip of an operator moving an iPhone while a Universal Robots arm with a gripper follows over a peg board on a workbench">
+      <source src="img/teleop-ur-arm.mp4" type="video/mp4">
+      <a href="img/teleop-ur-arm.mp4">Watch the clip</a>
+    </video>
+    <figcaption><span class="fno">Fig. 2.1</span>The operator moves the iPhone and the UR5e follows. Played at 1.5x.</figcaption>
+  </figure>
+
+  <p>I built a teleoperation framework for a UR5e robotic arm controlled by phone motion. Move the phone, and the arm follows. It uses an iPhone, with no additional special hardware.</p>
+
+  <p>It's been tested by over 100 users. At IROS in Pittsburgh, Pennsylvania, people who came to the booth drove the arm at MIT live, doing pick-and-place tasks while watching it over a Zoom stream.</p>
+
+  <h2>Why it matters</h2>
+  <p>Teleoperation is typically very expensive. The industrial robots that you teleoperate can cost 5, 6, and even 7 figures, but what many people don't know is that the devices that actually do the teleoperating are also really expensive (haptic gloves, VR headsets), or they don't fluidly mimic motion (SpaceMice, joysticks).</p>
+  <p>However, almost every single person on this planet has all the base technology needed to drive an industrial robot: their phone. In fact, the one thing you really need to teleop something is something that can derive pose, and a couple buttons.</p>
+  <p>Most phones have a camera and a built-in IMU. IMUs are great for detecting rotation, but to get position you have to double integrate the acceleration they provide, which leads to inaccuracy. Cameras can actually detect how much a phone moves in free space, very similar to how mice work, and fusing these two data sources provides pretty robust motion tracking. On an iPhone, ARKit does this fusion.</p>
+
+  <h2>How it works</h2>
+  <p>The pipeline: the iPhone's ARKit pose goes over Wi-Fi to a ROS 2 node that rejects stale packets, a rotation matrix maps phone space to the robot frame, and RTDE servoL injects the command with a 100 ms lookahead. Since the phone only sends data at 60 Hz, commands go out at 125 Hz and the arm's 500 Hz internal controller fills in between them.</p>
+
+  <figure class="fig">
+    <ol class="flow" aria-label="Signal path from the phone to the arm">
+      <li class="node"><span class="node-h">iPhone</span><span class="node-d">ARKit tracks the phone's pose in 6 DoF</span></li>
+      <li class="edge"><span>60 Hz</span><span>Wi-Fi, UDP</span></li>
+      <li class="node"><span class="node-h">ROS 2 node</span><span class="node-d">Drops stale packets, rotates phone frame into robot frame</span></li>
+      <li class="edge"><span>125 Hz</span><span>RTDE servoL</span></li>
+      <li class="node"><span class="node-h">UR5e controller</span><span class="node-d">Fills in between commands on its own loop</span></li>
+      <li class="edge"><span>500 Hz</span><span>joint control</span></li>
+      <li class="node"><span class="node-h">Arm</span><span class="node-d">UR5e with a Robotiq Hand-E gripper</span></li>
+    </ol>
+    <figcaption><span class="fno">Fig. 2.2</span>Signal path from the phone to the arm, with the rate of each link.</figcaption>
+  </figure>
+
+  <table class="spec">
+    <caption><span class="fno">Table 2.1</span>Key numbers</caption>
+    <tbody>
+      <tr><th scope="row">Phone pose rate</th><td><span class="v">60 Hz, 6 DoF from ARKit</span></td></tr>
+      <tr><th scope="row">Command rate</th><td><span class="v">125 Hz into the arm's 500 Hz controller</span></td></tr>
+      <tr><th scope="row">End-to-end latency</th><td><div class="cell"><span class="v">about 125 ms</span><span class="note">Measured by counting frames in slow-motion video, from phone motion to arm motion.</span></div></td></tr>
+      <tr><th scope="row">Extra hardware cost</th><td><span class="v">$0</span></td></tr>
+    </tbody>
+  </table>
+
+  <p>Around that sit the parts that make it usable by strangers. If the arm hits something and stops, the controller reconnects without a restart. If the phone's packets stop for half a second, the arm holds its pose. A button on the phone locks the gripper's rotation to the nearest 90° so hand tremor doesn't tilt it, and a logger records end-effector, joint and gripper data for replay.</p>
+
+  <h2>How I got there</h2>
+  <p>ROS 2 trajectory controllers are designed for pre-planned paths, not for reacting in real-time. Teleoperation needs continuous, fluid motion. With the phone sending 60 packets per second, each command was treated as a new trajectory, causing jerky movements and constant velocity and acceleration limit violations.</p>
+  <p>I tried multiple approaches, and each improved a part of the system but sacrificed another:</p>
+  <ul>
+    <li>Velocity controllers: ideally smooth, but jittery due to packet noise.</li>
+    <li>MoveIt 2 servo: made for continuous commands, but unreliable at 60 Hz input.</li>
+    <li>EKF and low-pass filtering: fluid motion, but the added latency made the arm feel like it was moving underwater.</li>
+  </ul>
+  <p>The solution was to stop fighting ROS 2 and split responsibilities. I used Universal Robots' RTDE for direct command injection, while ROS 2 handled launching the robot, gripper services, and overall modularity.</p>
+
+  <h2>What 100 users showed</h2>
+  <p>People range across a variety of ages and skill levels, and it's hard to make one system adapt to everyone. Because of this, I added multiple modes that people can use, ranging from beginner to expert. Beginner maps 30% of the input to the output, and expert is 1:1.</p>
+</article>
+
+<nav class="pager" aria-label="More projects">
+  <a class="prev" href="actuator.html" rel="prev"><span class="dir">Previous</span> <span class="name">01 Harmonic Drive Actuator</span></a>
+  <a class="all" href="index.html#projects">All projects</a>
+  <a class="next" href="magnetic-feet.html" rel="next"><span class="dir">Next</span> <span class="name">03 Humanoid High Traction Magnetic Feet</span></a>
+</nav>
+
+</main>
+
+<footer class="wrap foot">
+  <div class="foot-in">
+  <p>Harish Pravin</p>
+  <ul class="contact">
+    <li><a href="mailto:harish2pravin@gmail.com">harish2pravin@gmail.com</a></li>
+    <li><a href="https://www.linkedin.com/in/harish-mit">LinkedIn</a></li>
+    <li><a href="https://github.com/harivin">GitHub</a></li>
+  </ul>
+  <p class="updated">Last updated November 2026</p>
+  </div>
+</footer>
+</body>
+</html>
